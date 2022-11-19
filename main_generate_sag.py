@@ -39,7 +39,7 @@ if __name__ == '__main__':
     numSuccessors = 15 # should be greater or equal to beam_width - 'q' hyperparam in the paper
     num_roots_sag = 3 # max number of roots to be displayed in the sag
 
-    input_folder = 'Images'
+    input_folder = 'Images_pedestrian'#'Images'
 
     maxRootSize = 49 # max number of patches allowed for a root
 
