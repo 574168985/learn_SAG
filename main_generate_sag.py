@@ -49,17 +49,21 @@ if __name__ == '__main__':
         use_cuda = 1
     # load DNN model
     model = load_model_new(use_cuda=use_cuda, model_name='vgg19')
+    print('model = load_model_new')
 
     images_no_roots_found = 0
 
     # traverse input image folder
     input_path = './'+input_folder+'/'
     dirs = os.listdir(input_path)
+    print('dirs = os.listdir(input_path)')
     # dirs = [folder]
     for d in dirs:
+        print('for d in dirs:')
         if not os.path.isdir(input_path + d):
             continue
         files = os.listdir(input_path + d)
+        print('files = os.listdir(input_path + d)')
 
         total_files = len(files)
         file_counter = 0
@@ -69,6 +73,7 @@ if __name__ == '__main__':
             os.makedirs(output_path)
 
         pre_existing_result_dirs = os.listdir(output_path)
+        print('pre_existing_result_dirs = os.listdir(output_path)')
 
         # start search
         success_counter = 0
@@ -76,9 +81,11 @@ if __name__ == '__main__':
         img_label = -1
 
         for imgname in files:
+            print('for imgname in files:')
 
             # current support for jpg and png image formats
             if imgname.endswith('JPEG') or imgname.endswith('jpg') or imgname.endswith('png'):
+                print('if imgname.endswith')
                 input_img = input_path + d + '/' + imgname
                 print('imgname:', imgname)
                 imgprefix = imgname.split('.')[0]
