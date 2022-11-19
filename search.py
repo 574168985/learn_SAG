@@ -26,10 +26,12 @@ from copy import deepcopy
 
 # beam search - returns all roots found
 def beamSearch_topKSuccessors_roots(ref_mask, beam_width, numSuccessors, img, blurred_img, model, category, prob_thresh, full_image_probability, max_num_roots, root_size, use_cuda=use_cuda):
+    print('def beamSearch_topKSuccessors_roots(ref_mask, beam_width, numSuccessors, img, blurred_img, model')
     roots_mp = []
     #preprocess image - needed for get_mask_insertion_prob()
     img = preprocess_image(img, use_cuda, require_grad=False)
     blurred_img = preprocess_image(blurred_img, use_cuda, require_grad=False)
+    print('blurred_img = preprocess_image(blurred_img, use_cuda, require_grad=False)')
 
     # init
     init_mask = np.ones((1,1,7,7))
@@ -37,12 +39,15 @@ def beamSearch_topKSuccessors_roots(ref_mask, beam_width, numSuccessors, img, bl
     # beam_masks = beamSearch_Init(ref_mask, beam_width, numSuccessors)
     # num_patches_inserted += 1
     for i in range(root_size):
+        print('for i in range(root_size):')
         # generate all successors
         all_successors_mp = beamSearch_get_all_successors_mp(ref_mask, beam_masks, numSuccessors, full_image_probability, img, blurred_img, model, category, use_cuda=use_cuda)
+        print('all_successors_mp = beamSearch_get_all_successors_mp(ref_mask, beam_masks, numSuccessors,')
         if all_successors_mp == []: # no more successors left
             break
         # select top beam masks and add distict roots if found
         beam_masks, roots_mp = beamSearch_get_topk_masks_roots(roots_mp, all_successors_mp, beam_width, prob_thresh, full_image_probability, img, blurred_img, model, category)
+        print('beam_masks, roots_mp = beamSearch_get_topk_masks_roots(roots_mp, all_successors_mp, beam_width, prob_thresh,')
         #print('roots_found: ', len(roots_mp))
         if len(roots_mp) > max_num_roots: # max roots limit reached
             break
@@ -110,27 +115,34 @@ def beamSearch_get_successor_indices(invalid_indices, ref_mask, numSuccessors):
 
 # beam search - function to generate all successor (mask, prob) pairs
 def beamSearch_get_all_successors_mp(ref_mask, beam_masks, numSuccessors, full_image_probability, img, blurred_img, model, category, use_cuda=use_cuda):
+    print('def beamSearch_get_all_successors_mp(ref_mask, beam_masks, numSuccessors, full_image_probability, img, blurred_img, model, category, use_cuda=use_cuda):')
     mp_list = []
     for mask in beam_masks:
+        print('for mask in beam_masks:')
         invalid_indices = np.where(mask == 0)
         # get successor indices
         successor_indices, num_successors = beamSearch_get_successor_indices(invalid_indices, ref_mask, numSuccessors)
+        print('successor_indices, num_successors = beamSearch_get_successor_indices(invalid_indices, ref_mask, numSuccessors)')
         for index in range(num_successors):
+            print('for index in range(num_successors):')
             new_mask = deepcopy(mask)
             new_mask[successor_indices[0][index]][successor_indices[1][index]][successor_indices[2][index]][successor_indices[3][index]] = 0 # add new patch to generate successor mask
             insertion_prob = get_mask_insertion_prob(new_mask, img, blurred_img, model, category, view=0, use_cuda=use_cuda)
             rel_prob = insertion_prob/full_image_probability
             mp_list.append((new_mask, insertion_prob, rel_prob))
+            print('mp_list.append((new_mask, insertion_prob, rel_prob))')
     # print('len(mp_list): ', len(mp_list))
     return mp_list
 
 # beam search - function to filter top k successors (k = beam_width)
 def beamSearch_get_topk_masks_roots(roots_mp, all_successors_mp, beam_width, prob_thresh, full_image_probability, img, blurred_img, model, category, use_cuda=use_cuda):
+    print('def beamSearch_get_topk_masks_roots(roots_mp, all_successors_mp, beam_width, prob_thresh, full_image_probability, img, blurred_img, model, category, use_cuda=use_cuda):')
     mask_list = []
     # sort successors masks in descending order of insertion prob
     all_successors_mp_sorted = sorted(all_successors_mp, key=lambda x: x[1], reverse=True)
     # select top k successors
     for mask, prob, rel_prob in all_successors_mp_sorted:
+        print('for mask, prob, rel_prob in all_successors_mp_sorted:')
         if prob > prob_thresh * full_image_probability:
             # remove extra patches in root
             minimal_mask, minimal_ins_prob = remove_extra_patches(mask, prob, prob_thresh, full_image_probability, img, blurred_img, model, category, use_cuda)
@@ -143,6 +155,7 @@ def beamSearch_get_topk_masks_roots(roots_mp, all_successors_mp, beam_width, pro
             mask_list.append(mask)
             if len(mask_list) > beam_width:
                 break
+        print('if prob > prob_thresh * full_image_probability:')
     return mask_list, roots_mp
 
 
