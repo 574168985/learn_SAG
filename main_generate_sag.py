@@ -100,6 +100,7 @@ if __name__ == '__main__':
 
                 # start time stamp
                 start_time = time.time()
+                print('start_time = time.time()')
 
                 # get low probability blurred image
                 img, blurred_img = Get_blurred_img(
@@ -111,17 +112,21 @@ if __name__ == '__main__':
                                     Median_param=11,
                                     blur_type='Black',
                                     use_cuda=use_cuda)
+                print('img, blurred_img = Get_blurred_img')
 
                 # get top "numCategories" predicted categories with their probabilities
                 top_cp = get_topn_categories_probabilities_pairs(img, model, numCategories, use_cuda=use_cuda)
+                print('top_cp = get_topn_categories_probabilities_pairs')
 
                 for category, probability in top_cp:
+                    print('for category, probability in top_cp')
 
                     # get the ground truth label for the given category
                     f_groundtruth = open('./GroundTruth1000.txt')
                     category_name = f_groundtruth.readlines()[category]
                     category_name = category_name[:-2]
                     f_groundtruth.close()
+                    print('f_groundtruth.close()')
 
                     # get perturbation mask
                     mask, upsampled_mask = Integrated_Mask(
@@ -137,9 +142,11 @@ if __name__ == '__main__':
                                              tv_coeff=0.2 * 100,
                                              size_init=28,
                                              use_cuda=use_cuda)
+                    print('mask, upsampled_mask = Integrated_Mask')
 
                     # get all DISTINCT roots found via beam search
                     roots_mp = beamSearch_topKSuccessors_roots(mask, beam_width, numSuccessors, img, blurred_img, model, category, prob_thresh, probability, max_num_roots, maxRootSize, use_cuda=use_cuda)
+                    print('roots_mp = beamSearch_topKSuccessors_roots')
 
                     numRoots = len(roots_mp)
                     print('numRoots_all = ', numRoots)
@@ -156,16 +163,19 @@ if __name__ == '__main__':
                     if numRoots_Overlap > num_roots_sag:
                         maximal_Overlap_mp = maximal_Overlap_mp[:num_roots_sag]
                         numRoots_Overlap = num_roots_sag
+                    print('if numRoots_Overlap > num_roots_sag:')
 
                     # end time stamp
                     end_time = time.time()
                     # time taken
                     time_taken = end_time - start_time
                     time_taken = np.around(time_taken, decimals=3)
+                    print('time_taken = np.around(time_taken, decimals=3)')
 
                     # deletion insertion on filtered set of masks - just  to generate result figures
                     dnf = ""
                     for mask, ins_prob, rel_prob in maximal_Overlap_mp:
+                        print('for mask, ins_prob, rel_prob in maximal_Overlap_mp:')
                         output_file_videoimgs = imgprefix + '_'
                         delloss_top2, insloss_top2, minsufexpmask_upsampled, showimg_buffer = Deletion_Insertion_Comb_withOverlay(
                                                                                                maxRootSize,
@@ -178,12 +188,14 @@ if __name__ == '__main__':
                                                                                                use_cuda=use_cuda,
                                                                                                blur_mask=0,
                                                                                                outputfig=1)
+                        print('delloss_top2, insloss_top2, minsufexpmask_upsampled, showimg_buffer = Deletion_Insertion_Comb_withOverlay')
 
 
                         output_path_img = output_path + imgprefix + "_timetaken_" + str(time_taken) + "_category_" + str(category_name) + "_probthresh_" + str(prob_thresh) + "/"
                         output_file_perturbation_heatmaps = output_path_img + 'perturbation_'
                         output_path_count = output_path_img + '_insprob_' + str(ins_prob) + '_relprob_' + str(rel_prob) + "/"
                         outvideo_path = output_path_count + 'VIDEO/'
+                        print('outvideo_path = output_path_count + ')
 
                         # create MDNF expression
                         patch_boolean_list = get_patch_boolean(mask)
@@ -192,6 +204,7 @@ if __name__ == '__main__':
                             conjunction += ' & P'+str(b)
                         conjunction = conjunction[3:]
                         dnf += ' | '+conjunction
+                        print('dnf += ')
 
                         # save obtained sample
 
@@ -200,9 +213,11 @@ if __name__ == '__main__':
 
                         # save perturbation heatmaps
                         save_perturbation_heatmap(output_file_perturbation_heatmaps, upsampled_mask, img * 255, blurred_img, blur_mask=0)
+                        print('save_perturbation_heatmap')
 
                         # unpack result images
                         for item in showimg_buffer:
+                            print('for item in showimg_buffer:')
                             deletion_img, insertion_img, del_curve, insert_curve, out_pathx, xtick, line_i = item
                             out_pathx = outvideo_path + out_pathx
                             showimage(deletion_img, insertion_img, del_curve, insert_curve, out_pathx, xtick, line_i)
@@ -212,34 +227,42 @@ if __name__ == '__main__':
                         save_perturbation_heatmap(output_file_perturbationminsufexp_heatmaps, minsufexpmask_upsampled, img * 255, blurred_img, blur_mask=0)
                         insertion_img = cv2.cvtColor(insertion_img, cv2.COLOR_RGB2BGR)
                         cv2.imwrite(output_path_count + imgprefix + 'InsertionImg.png', insertion_img * 255)
+                        print('cv2.imwrite(output_path_count')
 
                         # write root conjunctions
                         conjunction_file = open(output_path_count + imgprefix + 'conjunction.txt', 'w+')
                         conjunction_file.write(conjunction)
                         conjunction_file.close()
+                        print('conjunction_file.close()')
 
                     # write MDNF expression
                     dnf_file = open(output_path_img + 'dnf.txt', 'w+')
                     dnf = dnf[3:]
                     dnf_file.write(dnf)
                     dnf_file.close()
+                    print('dnf_file.close()')
 
                     # save SAG roots as a GIF
                     create_minsufexp_gif(output_path_img)
+                    print('create_minsufexp_gif(output_path_img)')
 
                     ## build patch deletion tree ##
 
                     # load original image
                     img_ori = cv2.imread(output_path_img + 'perturbation_original.png')
                     img_ori = cv2.cvtColor(img_ori, cv2.COLOR_RGB2BGR)
+                    print('img_ori = cv2.cvtColor(img_ori, cv2.COLOR_RGB2BGR)')
 
                     # create patchImages folder if not exists
                     current_patchImages_path = output_path_img + 'SAG_PatchImages_'+str(numRoots_Overlap)+'roots'
                     if not os.path.isdir(current_patchImages_path):
                         os.makedirs(current_patchImages_path)
+                    print('current_patchImages_path = output_path_img + ')
 
                     # create and save grid image
                     gridimage(img_ori, output_path_img + 'gridimage.png')
+                    print('gridimage(img_ori, output_path_img')
+
 
                     # get set of conjunctions from DNF expression
                     conjuncts = get_conjuncts_set(dnf)
@@ -250,6 +273,7 @@ if __name__ == '__main__':
 
                     # build tree
                     sag_tree = build_tree(conjuncts, ups, img_ori, blurred_img, model, category, current_patchImages_path, node_prob_thresh, probability)
+                    print('sag_tree = build_tree')
 
                     # book-keeping and save generated result files
                     f = output_path_img + 'SAG_'+str(numRoots_Overlap)+'roots.dot'
@@ -273,11 +297,13 @@ if __name__ == '__main__':
                     tmp_img_ori = cv2.cvtColor(tmp_img_ori, cv2.COLOR_RGB2BGR)
                     img_ori_padded = np.ones((hp,wp,c)) * 0
                     img_ori_padded[off:off+h1, off:off+w1, :] = tmp_img_ori
+                    print('img_ori_padded[off:off+h1, off:off+w1, :] = tmp_img_ori')
 
                     # concatenate image and explanation tree
                     img_sag_final = np.concatenate((img_ori_padded, img_tree), axis=1)
                     # save generated sag image
                     cv2.imwrite(f3, img_sag_final)
+                    print('cv2.imwrite(f3, img_sag_final)')
 
                 file_counter += 1
                 print('files processed: {}/{}'.format(file_counter, total_files))

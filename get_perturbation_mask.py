@@ -91,14 +91,17 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
     ####################################################
 
     # preprocess the input image and the baseline (low probability) image
+    print('def Integrated_Mask(ups, img, blurred_img, model')
     img = preprocess_image(img, use_cuda, require_grad=False)
     blurred_img = preprocess_image(blurred_img, use_cuda, require_grad=False)
     resize_size = img.data.shape
     resize_wh = (img.data.shape[2], img.data.shape[3])
+    print('resize_wh = (img.data.shape[2], img.data.shape[3])')
 
     # initialize the mask
     mask_init = np.ones((int(resize_wh[0]/ups), int(resize_wh[1]/ups)), dtype=np.float32)
     mask = numpy_to_torch(mask_init, use_cuda, requires_grad=True)
+    print('mask = numpy_to_torch(mask_init, use_cuda, requires_grad=True)')
 
     # upsampler
     if use_cuda:
@@ -109,12 +112,14 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
     # You can choose any optimizer
     # The optimizer doesn't matter, because we don't need optimizer.step(), we just use it to compute the gradient
     optimizer = torch.optim.Adam([mask], lr=0.1)
+    print('optimizer = torch.optim.Adam([mask], lr=0.1)')
 
     # containers for curve metrics
     curve1 = np.array([])
     curve2 = np.array([])
     curvetop = np.array([])
     curve_total = np.array([])
+    print('curve_total = np.array([])')
 
     # Integrated gradient descent
 
@@ -123,20 +128,26 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
     beta = 0.2
 
     for i in range(max_iterations):
+        print('for i in range(max_iterations):')
 
         upsampled_mask = upsample(mask)
         upsampled_mask = upsampled_mask.expand(1, 3, upsampled_mask.size(2), upsampled_mask.size(3))
+        print('upsampled_mask')
 
         # the l1 term and the total variation term
         loss1 = l1_coeff * torch.mean(torch.abs(1 - mask)) + tv_coeff * tv_norm(mask, tv_beta)
         loss_all = loss1.clone()
+        print('loss_all = loss1.clone()')
 
         # compute the perturbed image
         perturbated_input_base = img.mul(upsampled_mask) + blurred_img.mul(1 - upsampled_mask)
+        print('perturbated_input_base')
 
         loss2_ori = torch.nn.Softmax(dim=1)(model(perturbated_input_base))[0, category] # masking loss (no integrated)
+        print('loss2_ori = torch.nn.Softmax')
 
         loss_ori = loss1 + loss2_ori
+        print('loss_ori = loss1 + loss2_ori')
         if i==0:
             if use_cuda:
                 curve1 = np.append(curve1, loss1.data.cpu().numpy())
@@ -152,9 +163,11 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
             loss_oridata = loss_ori.data.cpu().numpy()
         else:
             loss_oridata = loss_ori.data.numpy()
+        print('if use_cuda:')
 
         # calculate integrated gradient for next descent step
         for inte_i in range(integ_iter):
+            print('for inte_i in range(integ_iter):')
 
             # Use the mask to perturbated the input image.
             integ_mask = 0.0 + ((inte_i + 1.0) / integ_iter) * upsampled_mask
@@ -173,8 +186,10 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
         # compute the integrated gradients for the given target,
         # and compute the gradient for the l1 term and the total variation term
         optimizer.zero_grad()
+        print('optimizer.zero_grad()')
         loss_all.backward()
         whole_grad = mask.grad.data.clone() # integrated gradient
+        print('whole_grad = mask.grad.data.clone() # integrated gradient')
 
         # LINE SEARCH with revised Armijo condition
 
@@ -187,6 +202,7 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
         Img_LS = img.mul(mask_LS) + blurred_img.mul(1 - mask_LS)
         outputsLS = torch.nn.Softmax(dim=1)(model(Img_LS))
         loss_LS = l1_coeff * torch.mean(torch.abs(1 - MaskClone)) + tv_coeff * tv_norm(MaskClone, tv_beta) + outputsLS[0, category]
+        print('loss_LS = l1_coeff * torch.mean')
 
         if use_cuda:
             loss_LSdata = loss_LS.data.cpu().numpy()
@@ -195,6 +211,7 @@ def Integrated_Mask(ups, img, blurred_img, model, category, max_iterations = 15,
         new_condition = whole_grad ** 2  # Here the direction is the whole_grad
         new_condition = new_condition.sum()
         new_condition = alpha * step * new_condition
+        print('new_condition = alpha * step * new_condition')
 
         # finding best step size using backtracking line search
         while loss_LSdata > loss_oridata - new_condition.cpu().numpy():
